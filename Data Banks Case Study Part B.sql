@@ -1,6 +1,5 @@
 --1. What is the unique count and total amount for each transaction type?
-  
-;select
+select
 txn_type
 , count(*) as Transaction_Count
 , sum(txn_amount) as Total_Amounts
@@ -8,7 +7,6 @@ from customer_transactions
 group by txn_type
 
 --2. What is the average total historical deposit counts and amounts for all customers?
-  
 ; with cte as
 (select 
   customer_id
@@ -23,7 +21,6 @@ avg(Total_Deposit_Amount)
 from cte
 
 --3. For each month - how many Data Bank customers make more than 1 deposit and either 1 purchase or 1 withdrawal in a single month?
-  
 ; with counts as (
     select
   customer_id
@@ -41,7 +38,6 @@ from counts
 group by month
 
 --4. What is the closing balance for each customer at the end of the month?
-  
 ; with cte as (
  select
     customer_id
@@ -67,7 +63,6 @@ customer_id
 from cte
 
 --5.What is the percentage of customers who increase their closing balance by more than 5%?
-  
 ; with cte as (
  select
     customer_id
@@ -87,20 +82,21 @@ select
 , last_day(dateadd('month', -1, eom_day)) as prev_eom
 , running_sum as eom_balance
 from cte ) 
- ,percent_inc as (
+,percent_inc as (
 select 
 cb1.customer_id
 ,cb1.eom_day
-,cb1.eom_balance
+,cb1.eom_balance as current_bal
 ,cb2.eom_day as prev_eom
 ,cb2.eom_balance as prev_month_closing_balance
-, ((cb1.eom_balance - cb2.eom_balance)/cb2.eom_balance) as balance_percent_diff
+, (current_bal - prev_month_closing_balance)/prev_month_closing_balance as balance_percent_diff
+, (CASE
+    WHEN cb1.eom_balance > prev_month_closing_balance AND balance_percent_diff >- 1.05 THEN 1 ELSE 0 END) as percent_flag
 from closing_balances as cb1
 inner join closing_balances as cb2 on cb1.prev_eom = cb2.eom_day AND cb1.customer_id = cb2.customer_id
-where cb2.eom_balance <>0  AND balance_percent_diff >= 0.05
+where cb2.eom_balance <>0 
  )
 select
-count (distinct customer_id)
+SUM(percent_flag) / COUNT(percent_flag)
 from percent_inc
-
 
